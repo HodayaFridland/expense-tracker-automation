@@ -6,6 +6,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=expenses.db"));
 
 var app = builder.Build();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 
 app.MapPost("/transactions", async (Transaction transaction, AppDbContext db) =>
