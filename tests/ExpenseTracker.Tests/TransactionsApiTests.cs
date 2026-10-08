@@ -8,10 +8,12 @@ using Microsoft.Extensions.DependencyInjection;
 public class TransactionsApiTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly HttpClient _client;
+    private readonly CustomWebApplicationFactory _factory;
 
  public TransactionsApiTests(CustomWebApplicationFactory factory)
 {
     _client = factory.CreateClient();
+      _factory = factory;  
 
     // איפוס: מחיקת כל הרשומות לפני כל בדיקה → כל בדיקה מתחילה נקייה
     using var scope = factory.Services.CreateScope();
@@ -108,5 +110,47 @@ public async Task GetSummary_WithNoTransactions_ReturnsZeroBalance()
     Assert.Equal(0, summary.Balance);   
 }
 
+[Fact]
+public async Task DeleteTransaction_WhenNotFound_ReturnsNotFound()
+{
+    // Act
+  var response = await _client.DeleteAsync("/transactions/9999");
+
+
+    // Assert
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 }
+  [Fact]
+public async Task UpdateTransaction_WhenNotFound_ReturnsNotFound()
+{
+    // Act
+    var response =await _client.PutAsJsonAsync("/transactions/9999", new { amount = 50, type = "expense", category = "food", date = "2026-10-08" });
+
+    // Assert
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+}
+
+[Fact]
+public async Task PostTransaction_PersistsToDatabase()
+{
+    // Act — יוצרים דרך ה-API
+    await _client.PostAsJsonAsync("/transactions",
+        new { amount = 42, type = "expense", category = "books", date = "2026-10-08" });
+
+    // Assert — שואלים את ה-DB ישירות (לא את ה-API!)
+    using var scope = _factory.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var saved = db.Transactions.SingleOrDefault(t => t.Category == "books");
+
+    Assert.NotNull(saved);
+    Assert.Equal(42, saved!.Amount);
+    Assert.Equal("expense", saved.Type);
+}
+
+
+}
+
+   
+
+
 public record Summary(decimal Income, decimal Expenses, decimal Balance);

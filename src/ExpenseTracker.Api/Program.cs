@@ -12,14 +12,10 @@ app.UseStaticFiles();
 
 app.MapPost("/transactions", async (Transaction transaction, AppDbContext db) =>
 {
-    if (transaction.Amount <= 0)
-    return Results.BadRequest("Amount must be greater than 0.");
+   var error = ValidateTransaction(transaction);
+if (error is not null)
+    return Results.BadRequest(error);
 
-if  (transaction.Type != "income" && transaction.Type != "expense")
-    return Results.BadRequest("Invalid transaction type. Must be either 'income' or 'expense'.");
-
-if (string.IsNullOrWhiteSpace(transaction.Category))
-    return Results.BadRequest("Category is required.");
 
     db.Transactions.Add(transaction);
     await db.SaveChangesAsync();
@@ -50,14 +46,10 @@ app.MapPut("/transactions/{id}", async (int id, Transaction updated, AppDbContex
     if (transaction is null)
         return Results.NotFound();
 
- if (updated.Amount <= 0)
-    return Results.BadRequest("Amount must be greater than 0.");
+var error = ValidateTransaction(updated);
+if (error is not null)
+    return Results.BadRequest(error);
 
-if  (updated.Type != "income" && updated.Type != "expense")
-    return Results.BadRequest("Invalid transaction type. Must be either 'income' or 'expense'.");
-
-if (string.IsNullOrWhiteSpace(updated.Category))
-    return Results.BadRequest("Category is required.");
 
 
     transaction.Amount = updated.Amount;
@@ -87,5 +79,16 @@ app.MapGet("/transactions/summary", async (AppDbContext db) =>
 
 
 app.Run();
+static string? ValidateTransaction(Transaction t)
+{
+    if (t.Amount <= 0)
+        return "Amount must be greater than 0.";
+    if (t.Type != "income" && t.Type != "expense")
+        return "Invalid transaction type. Must be either 'income' or 'expense'.";
+    if (string.IsNullOrWhiteSpace(t.Category))
+        return "Category is required.";
+    return null; // null = הכול תקין
+}
+
 public partial class Program { }
 
