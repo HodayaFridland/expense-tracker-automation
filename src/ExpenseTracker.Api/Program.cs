@@ -87,3 +87,5 @@ app.MapGet("/transactions/summary", async (AppDbContext db) =>
 
 
 app.Run();
+public partial class Program { }
+
